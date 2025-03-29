@@ -111,28 +111,39 @@ router.post(`/`, uploadOptions.single('image'), async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-    //edit the product
+    // Kiểm tra ID sản phẩm có hợp lệ không
     if (!mongoose.isValidObjectId(req.params.id)) {
         return res.status(400).send('Invalid Product Id');
     }
+    
+    // Kiểm tra danh mục có tồn tại không
     const category = await Category.findById(req.body.category);
     if (!category) return res.status(400).send('Invalid Category');
 
+    // Lấy sản phẩm hiện tại để giữ lại trường image
+    const existingProduct = await Product.findById(req.params.id);
+    if (!existingProduct) return res.status(404).send('Product not found');
+
+    // Tạo đối tượng cập nhật với các trường từ request
+    const updateData = {
+        name: req.body.name,
+        description: req.body.description,
+        richDescription: req.body.richDescription,
+        brand: req.body.brand,
+        price: req.body.price,
+        category: req.body.category,
+        countInStock: req.body.countInStock,
+        rating: req.body.rating,
+        numReviews: req.body.numReviews,
+        isFeatured: req.body.isFeatured,
+        // Giữ nguyên trường image từ sản phẩm hiện tại
+        image: existingProduct.image
+    };
+
+    // Cập nhật sản phẩm
     const product = await Product.findByIdAndUpdate(
         req.params.id,
-        {
-            name: req.body.name,
-            description: req.body.description,
-            richDescription: req.body.richDescription,
-            image: req.body.image,
-            brand: req.body.brand,
-            price: req.body.price,
-            category: req.body.category,
-            countInStock: req.body.countInStock,
-            rating: req.body.rating,
-            numReviews: req.body.numReviews,
-            isFeatured: req.body.isFeatured,
-        },
+        updateData,
         { new: true }
     );
 
@@ -140,6 +151,7 @@ router.put('/:id', async (req, res) => {
 
     res.send(product);
 });
+
 
 router.put(
     //http://localhost:3000/api/v1/products/gallery-images/67df90da28fad50fcf12f36f (insert form data more images instead image)
