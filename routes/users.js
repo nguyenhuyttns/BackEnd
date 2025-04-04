@@ -150,7 +150,7 @@ router.get(`/get/count`, async (req, res) => {
     });
 });
 
-// Route quên mật khẩu (đơn giản hóa)
+// Route quên mật khẩu
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -165,7 +165,7 @@ router.post('/forgot-password', async (req, res) => {
     }
     
     // Tạo token đặt lại mật khẩu (có thời hạn 1 giờ)
-    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString('hex');
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = Date.now() + 3600000; // 1 giờ
     await user.save();
@@ -173,12 +173,12 @@ router.post('/forgot-password', async (req, res) => {
     // Tạo liên kết đặt lại mật khẩu
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     
-    // Thay vì gửi email, chỉ trả về link trong response
+    // Gửi email với liên kết
+    await sendResetPasswordEmail(user.email, resetLink);
+    
     res.status(200).json({ 
       success: true, 
-      message: 'Token đặt lại mật khẩu đã được tạo', 
-      resetLink: resetLink,
-      resetToken: resetToken // Trả về token để dễ dàng kiểm thử
+      message: 'Email đặt lại mật khẩu đã được gửi' 
     });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -189,6 +189,7 @@ router.post('/forgot-password', async (req, res) => {
     });
   }
 });
+
 
 // Route đặt lại mật khẩu (giữ nguyên)
 router.post('/reset-password', async (req, res) => {
