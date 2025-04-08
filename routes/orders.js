@@ -2,6 +2,7 @@ const { Order } = require('../models/order');
 const { OrderItem } = require('../models/order-item');
 const express = require('express');
 const router = express.Router();
+const { sendOrderConfirmationEmail } = require('../helpers/email-service');
 
 router.get(`/`, async (req, res) => {
     //http://localhost:3000/api/v1/orders (find all order)
@@ -58,19 +59,24 @@ router.get(`/get/count`, async (req, res) => {
     });
 });
 
-router.get(`/get/userorders/:userid`, async (req, res) =>{
+router.get(`/get/userorders/:userid`, async (req, res) => {
     //http://localhost:3000/api/v1/orders/get/userorders/67dd0e237934ed172345c5e4 (get oder of user)
 
-    const userOrderList = await Order.find({user: req.params.userid}).populate({ 
-        path: 'orderItems', populate: {
-            path : 'product', populate: 'category'} 
-        }).sort({'dateOrdered': -1});
+    const userOrderList = await Order.find({ user: req.params.userid })
+        .populate({
+            path: 'orderItems',
+            populate: {
+                path: 'product',
+                populate: 'category',
+            },
+        })
+        .sort({ dateOrdered: -1 });
 
-    if(!userOrderList) {
-        res.status(500).json({success: false})
-    } 
+    if (!userOrderList) {
+        res.status(500).json({ success: false });
+    }
     res.send(userOrderList);
-})
+});
 
 router.post('/', async (req, res) => {
     const orderItemsIds = Promise.all(
@@ -108,13 +114,41 @@ router.post('/', async (req, res) => {
         zip: req.body.zip,
         country: req.body.country,
         phone: req.body.phone,
-        status: req.body.status,
+        status: req.body.status || 'Pending',
         totalPrice: totalPrice,
         user: req.body.user,
     });
     order = await order.save();
 
     if (!order) return res.status(400).send('the order cannot be created!');
+
+    // After successfully creating the order, send confirmation email
+    try {
+        // First, populate the order with product details for the email
+        const populatedOrder = await Order.findById(order._id)
+            .populate('user', 'name email')
+            .populate({
+                path: 'orderItems',
+                populate: {
+                    path: 'product',
+                    populate: 'category',
+                },
+            });
+
+        // Get user email from the user ID
+        const { User } = require('../models/user');
+        const user = await User.findById(req.body.user);
+        
+        if (user && user.email) {
+            await sendOrderConfirmationEmail(user.email, populatedOrder);
+            console.log(`Order confirmation email sent to ${user.email}`);
+        } else {
+            console.log('User email not found, cannot send order confirmation');
+        }
+    } catch (error) {
+        console.error('Error sending order confirmation email:', error);
+        // Continue with response even if email fails
+    }
 
     res.send(order);
 });
