@@ -4,6 +4,11 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const multer = require('multer');
+const axios = require('axios')
+
+function getRandomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 const FILE_TYPE_MAP = {
     'image/png': 'png',
@@ -77,6 +82,95 @@ router.get(`/get/featured/:count`, async (req, res) => {
         res.status(500).json({ success: false });
     }
     res.send(products);
+});
+
+router.post('/random/:query/:per_page/:categoryId?', async (req, res) => {
+    //http://localhost:3000/api/v1/products/random/Fashion/100/67fe376041cbb6cec620bcfc
+    try {
+        const query = req.params.query;
+        const perPage = parseInt(req.params.per_page);
+        // Sử dụng categoryId từ tham số URL hoặc từ body nếu có, nếu không sử dụng ID mặc định
+        const categoryId = req.params.categoryId || req.body.categoryId || '67fe1a2d8fee74bae6966f89';
+        
+        // Kiểm tra tham số
+        if (!query) {
+            return res.status(400).send('Query parameter is required');
+        }
+        
+        if (isNaN(perPage) || perPage <= 0) {
+            return res.status(400).send('Per_page must be a positive number');
+        }
+        
+        // Kiểm tra danh mục có tồn tại không
+        const category = await Category.findById(categoryId);
+        if (!category) {
+            return res.status(400).send('Invalid Category ID');
+        }
+        
+        // Kiểm tra API key
+        if (!process.env.UNSPLASH_API_KEY) {
+            return res.status(500).send('Unsplash API key is not configured');
+        }
+        
+        // Gọi API Unsplash để lấy dữ liệu
+        const unsplashResponse = await axios.get(`https://api.unsplash.com/search/photos`, {
+            params: {
+                query: query,
+                per_page: perPage,
+                client_id: process.env.UNSPLASH_API_KEY
+            }
+        });
+        
+        // Kiểm tra kết quả từ Unsplash
+        if (!unsplashResponse.data || !unsplashResponse.data.results || unsplashResponse.data.results.length === 0) {
+            return res.status(404).send('No images found on Unsplash for the given query');
+        }
+        
+        // Tạo mảng các promise để lưu nhiều sản phẩm cùng lúc
+        const productPromises = unsplashResponse.data.results.map(async (item) => {
+            // Xử lý trường hợp description hoặc alt_description là null
+            const description = item.description || item.alt_description || `${query} product`;
+            const richDescription = item.alt_description || item.description || `Premium ${query}`;
+            
+            // Tạo sản phẩm mới từ dữ liệu Unsplash
+            const product = new Product({
+                name: `${query.charAt(0).toUpperCase() + query.slice(1)} ${item.id}`,
+                description: description,
+                richDescription: richDescription,
+                image: item.urls.regular,
+                images: [item.urls.small, item.urls.thumb], // Thêm các kích thước ảnh khác
+                brand: item.user.username,
+                price: getRandomNumber(10, 100),
+                category: categoryId,
+                countInStock: getRandomNumber(10, 100),
+                rating: Math.min(5, item.likes / 100), // Giới hạn rating tối đa là 5
+                numReviews: Math.floor(item.likes / 2),
+                isFeatured: false,
+            });
+            
+            // Lưu sản phẩm vào database
+            return product.save();
+        });
+        
+        // Chờ tất cả các promise hoàn thành
+        const savedProducts = await Promise.all(productPromises);
+        
+        // Trả về kết quả
+        res.status(201).json({
+            success: true,
+            message: `Successfully created ${savedProducts.length} products from Unsplash`,
+            category: category.name,
+            products: savedProducts
+        });
+        
+    } catch (error) {
+        console.error('Error creating random products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create random products',
+            error: error.message
+        });
+    }
 });
 
 router.post(`/`, uploadOptions.single('image'), async (req, res) => {
