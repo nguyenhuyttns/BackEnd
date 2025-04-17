@@ -234,7 +234,7 @@ router.post('/random/:userid/:count?', async (req, res) => {
                 zip: `${getRandomNumber(10000, 99999)}`,
                 country: countries[getRandomNumber(0, countries.length - 1)],
                 phone: `+${getRandomNumber(10000000, 99999999)}`,
-                status: "Pending",
+                status: "Shipped",
                 totalPrice: totalPrice,
                 user: userId,
             });

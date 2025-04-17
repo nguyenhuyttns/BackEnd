@@ -84,6 +84,154 @@ router.get(`/get/featured/:count`, async (req, res) => {
     res.send(products);
 });
 
+// Endpoint để lấy thống kê sản phẩm (sản phẩm bán chạy nhất, tồn kho nhiều nhất, v.v.)
+router.get('/statistics/insights', async (req, res) => {
+    try {
+        // Lấy danh sách sản phẩm kèm thông tin danh mục
+        const products = await Product.find().populate('category');
+        
+        if (!products || products.length === 0) {
+            return res.status(404).json({ success: false, message: 'No products found' });
+        }
+        
+        // Sắp xếp sản phẩm theo số lượng đã bán (numReviews) - giảm dần
+        const bestSellingProducts = [...products].sort((a, b) => b.numReviews - a.numReviews);
+        
+        // Sắp xếp sản phẩm theo số lượng tồn kho - giảm dần
+        const mostStockedProducts = [...products].sort((a, b) => b.countInStock - a.countInStock);
+        
+        // Sắp xếp sản phẩm theo số lượng tồn kho - tăng dần (sắp hết hàng)
+        const lowStockProducts = [...products].sort((a, b) => a.countInStock - b.countInStock);
+        
+        // Sắp xếp sản phẩm theo doanh thu tiềm năng (giá * số lượng tồn kho)
+        const highValueInventory = [...products].sort((a, b) => 
+            (b.price * b.countInStock) - (a.price * a.countInStock)
+        );
+        
+        // Tính tổng giá trị tồn kho
+        const totalInventoryValue = products.reduce((sum, product) => 
+            sum + (product.price * product.countInStock), 0
+        );
+        
+        // Tính tổng số lượng đã bán
+        const totalSold = products.reduce((sum, product) => sum + product.numReviews, 0);
+        
+        // Phân tích theo danh mục
+        const categoryAnalysis = {};
+        products.forEach(product => {
+            const categoryName = product.category ? product.category.name : 'Uncategorized';
+            
+            if (!categoryAnalysis[categoryName]) {
+                categoryAnalysis[categoryName] = {
+                    count: 0,
+                    totalStock: 0,
+                    totalSold: 0,
+                    totalValue: 0
+                };
+            }
+            
+            categoryAnalysis[categoryName].count += 1;
+            categoryAnalysis[categoryName].totalStock += product.countInStock;
+            categoryAnalysis[categoryName].totalSold += product.numReviews;
+            categoryAnalysis[categoryName].totalValue += (product.price * product.countInStock);
+        });
+        
+        // Lấy top 5 cho mỗi danh mục
+        const result = {
+            bestSelling: bestSellingProducts.slice(0, 5).map(mapProductForResponse),
+            mostStocked: mostStockedProducts.slice(0, 5).map(mapProductForResponse),
+            lowStock: lowStockProducts.slice(0, 5).map(mapProductForResponse),
+            highValueInventory: highValueInventory.slice(0, 5).map(mapProductForResponse),
+            totalProducts: products.length,
+            totalInventoryValue: totalInventoryValue,
+            totalSold: totalSold,
+            categoryAnalysis: categoryAnalysis
+        };
+        
+        res.status(200).json({
+            success: true,
+            data: result
+        });
+    } catch (error) {
+        console.error('Error getting product statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get product statistics',
+            error: error.message
+        });
+    }
+});
+
+// Endpoint để lấy sản phẩm liên quan theo category
+router.get('/related/:categoryId', async (req, res) => {
+    try {
+      const { categoryId } = req.params;
+      const { exclude } = req.query; // Chuỗi các ID sản phẩm cần loại trừ, ngăn cách bởi dấu phẩy
+      
+      // Kiểm tra categoryId
+      if (!mongoose.isValidObjectId(categoryId)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid category ID format' 
+        });
+      }
+      
+      // Kiểm tra xem category có tồn tại không
+      const category = await Category.findById(categoryId);
+      if (!category) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Category not found' 
+        });
+      }
+      
+      // Xử lý danh sách sản phẩm cần loại trừ
+      let excludeIds = [];
+      if (exclude) {
+        excludeIds = exclude.split(',').filter(id => mongoose.isValidObjectId(id));
+      }
+      
+      // Tìm sản phẩm cùng category, loại trừ các sản phẩm đã có trong giỏ hàng
+      const query = {
+        category: categoryId
+      };
+      
+      // Chỉ thêm điều kiện loại trừ nếu có sản phẩm cần loại trừ
+      if (excludeIds.length > 0) {
+        query._id = { $nin: excludeIds };
+      }
+      
+      // Tìm sản phẩm theo query
+      const relatedProducts = await Product.find(query)
+        .populate('category')
+        .limit(5);
+      
+      // Kiểm tra kết quả
+      if (!relatedProducts || relatedProducts.length === 0) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'No related products found' 
+        });
+      }
+      
+      // Trả về kết quả thành công
+      res.status(200).json({
+        success: true,
+        count: relatedProducts.length,
+        data: relatedProducts
+      });
+    } catch (error) {
+      console.error('Error getting related products:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Server error', 
+        error: error.message 
+      });
+    }
+  });
+  
+
+
 router.post('/random/:query/:per_page/:categoryId?', async (req, res) => {
     //http://localhost:3000/api/v1/products/random/Fashion/100/67fe376041cbb6cec620bcfc
     try {
