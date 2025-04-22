@@ -6,8 +6,12 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const authJwt = require('./helpers/jwt');
 const errorHandler = require('./helpers/error-handler');
-const path = require('path'); // Thêm dòng này ở đầu file
+const path = require('path'); 
+const userActivityRoutes = require('./routes/user-activity');
+const recommendationsRoutes = require('./routes/recommendations');
 require('dotenv/config');
+
+const api = process.env.API_URL;
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
@@ -20,6 +24,8 @@ app.use(bodyParser.json());
 app.use(morgan('tiny'));
 app.use(authJwt());
 app.use('/public/uploads', express.static(__dirname + '/public/uploads'));
+app.use(`${api}/user-activity`, userActivityRoutes);
+app.use(`${api}/recommendations`, recommendationsRoutes);
 // app.use(errorHandler);
 
 // Phục vụ các file tĩnh từ thư mục public
@@ -37,7 +43,6 @@ const categoriesRoutes = require('./routes/categories');
 const usersRoutes = require('./routes/users');
 const ordersRoutes = require('./routes/orders');
 
-const api = process.env.API_URL;
 
 app.use(`${api}/products`, productsRouter);
 app.use(`${api}/categories`, categoriesRoutes);

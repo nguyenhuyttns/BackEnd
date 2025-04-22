@@ -84,6 +84,19 @@ router.get(`/get/featured/:count`, async (req, res) => {
     res.send(products);
 });
 
+function mapProductForResponse(product) {
+    return {
+        id: product.id,
+        name: product.name,
+        image: product.image,
+        price: product.price,
+        category: product.category ? product.category.name : 'Uncategorized',
+        countInStock: product.countInStock,
+        numReviews: product.numReviews,
+        inventoryValue: product.price * product.countInStock
+    };
+}
+
 // Endpoint để lấy thống kê sản phẩm (sản phẩm bán chạy nhất, tồn kho nhiều nhất, v.v.)
 router.get('/statistics/insights', async (req, res) => {
     try {

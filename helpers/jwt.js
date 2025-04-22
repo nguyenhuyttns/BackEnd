@@ -12,11 +12,10 @@ function authJwt() {
             { url: /\/public\/uploads(.*)/, methods: ['GET', 'OPTIONS'] },
             { url: /\/api\/v1\/products(.*)/, methods: ['GET', 'POST', 'OPTIONS'] },
             { url: /\/api\/v1\/categories(.*)/, methods: ['GET', 'POST', 'OPTIONS'] },
-            {
-                url: /\/api\/v1\/orders(.*)/,
-                methods: ['GET', 'POST', 'OPTIONS'],
-            },
+            { url: /\/api\/v1\/orders(.*)/, methods: ['GET', 'POST', 'OPTIONS'] },
             { url: /\/api\/v1\/users(.*)/, methods: ['GET', 'PUT', 'OPTIONS'] },
+            // Chỉ cho phép các route user-activity mà không cần xác thực, giữ recommendations cần xác thực
+            { url: /\/api\/v1\/user-activity(.*)/, methods: ['POST', 'GET', 'OPTIONS'] },
             `${api}/users/login`,
             `${api}/users/register`,
             `${api}/users/forgot-password`,
@@ -27,10 +26,22 @@ function authJwt() {
 }
 
 async function isRevoked(req, payload, done) {
+    // Danh sách các đường dẫn chỉ dành cho admin
+    const adminOnlyPaths = [
+        '/api/v1/users/get/count',
+        '/api/v1/orders/get/totalsales',
+        '/api/v1/products/random'
+        // Thêm các endpoint chỉ dành cho admin khác nếu cần
+    ];
+    
     if (!payload.isAdmin) {
-        done(null, true);
+        // Kiểm tra xem request có phải là cho các endpoint chỉ dành cho admin hay không
+        if (adminOnlyPaths.some(path => req.originalUrl.includes(path))) {
+            return done(null, true); // Từ chối token nếu là endpoint chỉ dành cho admin
+        }
     }
-
+    
+    // Cho phép tất cả các request khác
     done();
 }
 
