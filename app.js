@@ -9,6 +9,7 @@ const errorHandler = require('./helpers/error-handler');
 const path = require('path'); 
 const userActivityRoutes = require('./routes/user-activity');
 const recommendationsRoutes = require('./routes/recommendations');
+const paymentsRoutes = require('./routes/payments');
 require('dotenv/config');
 
 const api = process.env.API_URL;
@@ -26,6 +27,7 @@ app.use(authJwt());
 app.use('/public/uploads', express.static(__dirname + '/public/uploads'));
 app.use(`${api}/user-activity`, userActivityRoutes);
 app.use(`${api}/recommendations`, recommendationsRoutes);
+app.use(`${api}/payments`, paymentsRoutes);
 // app.use(errorHandler);
 
 // Phục vụ các file tĩnh từ thư mục public
@@ -35,6 +37,10 @@ app.use(express.static(path.join(__dirname, 'public'))); // Thêm dòng này
 app.get('/reset-password', (req, res) => {          // Thêm route này
   const token = req.query.token;
   res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
+});
+// Thêm vào app.js
+app.get('/payment/callback', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'payment-result.html'));
 });
 
 //Routers

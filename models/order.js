@@ -45,6 +45,21 @@ const orderSchema = mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+     // Thêm trường paymentMethod
+     paymentMethod: {
+        type: String,
+        required: false,
+        enum: ['COD', 'MOMO', 'BANK_TRANSFER', 'CREDIT_CARD'],
+        default: 'COD'
+    },
+    
+    // Thêm trường paymentStatus
+    paymentStatus: {
+        type: String,
+        required: false,
+        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+        default: 'PENDING'
+    },
 })
 
 orderSchema.virtual('id').get(function () {
