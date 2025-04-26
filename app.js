@@ -1,3 +1,5 @@
+require('dotenv/config');
+
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
@@ -10,7 +12,7 @@ const path = require('path');
 const userActivityRoutes = require('./routes/user-activity');
 const recommendationsRoutes = require('./routes/recommendations');
 const paymentsRoutes = require('./routes/payments');
-require('dotenv/config');
+
 
 const api = process.env.API_URL;
 
