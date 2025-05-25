@@ -4,7 +4,17 @@ const router = express.Router();
 const { UserActivity } = require('../models/user-activity');
 const { Product } = require('../models/product');
 
-// API ghi lại lượt xem sản phẩm
+/**
+ * Ghi lại lượt xem sản phẩm
+ * 
+ * @route POST /api/v1/user-activity/view
+ * @param {Object} req.body - Dữ liệu hoạt động
+ * @param {string} req.body.userId - ID của người dùng
+ * @param {string} req.body.productId - ID của sản phẩm
+ * @param {number} req.body.viewTime - Thời gian xem sản phẩm (tính bằng giây)
+ * @returns {Object} Thông báo thành công hoặc lỗi
+ * @description Ghi lại hoạt động xem sản phẩm của người dùng để phân tích và đề xuất
+ */
 router.post('/view', async (req, res) => {
   try {
     const { userId, productId, viewTime } = req.body;
@@ -40,7 +50,16 @@ router.post('/view', async (req, res) => {
   }
 });
 
-// API ghi lại thêm vào giỏ hàng
+/**
+ * Ghi lại hoạt động thêm sản phẩm vào giỏ hàng
+ * 
+ * @route POST /api/v1/user-activity/cart-add
+ * @param {Object} req.body - Dữ liệu hoạt động
+ * @param {string} req.body.userId - ID của người dùng
+ * @param {string} req.body.productId - ID của sản phẩm
+ * @returns {Object} Thông báo thành công hoặc lỗi
+ * @description Ghi lại hoạt động thêm sản phẩm vào giỏ hàng của người dùng
+ */
 router.post('/cart-add', async (req, res) => {
   try {
     const { userId, productId } = req.body;
@@ -74,7 +93,16 @@ router.post('/cart-add', async (req, res) => {
   }
 });
 
-// API ghi lại mua hàng
+/**
+ * Ghi lại hoạt động mua sản phẩm
+ * 
+ * @route POST /api/v1/user-activity/purchase
+ * @param {Object} req.body - Dữ liệu hoạt động
+ * @param {string} req.body.userId - ID của người dùng
+ * @param {string} req.body.productId - ID của sản phẩm
+ * @returns {Object} Thông báo thành công hoặc lỗi
+ * @description Ghi lại hoạt động mua sản phẩm của người dùng
+ */
 router.post('/purchase', async (req, res) => {
   try {
     const { userId, productId } = req.body;

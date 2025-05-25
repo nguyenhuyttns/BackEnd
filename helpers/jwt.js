@@ -1,6 +1,11 @@
 // helpers/jwt.js
 const expressJwt = require('express-jwt');
 
+/**
+ * Tạo middleware xác thực JWT
+ * @returns {Fuction} Middleware - Express được cấu hình
+ * @description Tạo middleware xác thực JWT với các đường dẫn miễn trừ
+ */
 function authJwt() {
     const secret = process.env.secret;
     const api = process.env.API_URL;
@@ -18,7 +23,7 @@ function authJwt() {
             { url: /\/api\/v1\/users(.*)/, methods: ['GET', 'PUT', 'OPTIONS'] },
             { url: /\/api\/v1\/user-activity(.*)/, methods: ['POST', 'GET', 'OPTIONS'] },
             { url: /\/api\/v1\/payments\/webhook/, methods: ['POST', 'OPTIONS'] },
-            { url: /\/api\/v1\/payments\/process-payment/, methods: ['POST', 'OPTIONS'] }, // Thêm route mới
+            { url: /\/api\/v1\/payments\/process-payment/, methods: ['POST', 'OPTIONS'] },
             { url: /\/api\/v1\/payments(.*)/, methods: ['POST', 'GET', 'OPTIONS'] },
             `${api}/users/login`,
             `${api}/users/register`,
@@ -30,22 +35,24 @@ function authJwt() {
     });
 }
 
+/**
+ * Kiểm tra quyển truy cập token
+ * @param {*} req - Đối tượng request express
+ * @param {*} payload - Nội dung đã giải mã JWT
+ * @param {*} done - Callback funtion để trả về kết quả
+ * @returns 
+ */
 async function isRevoked(req, payload, done) {
-    // Danh sách các đường dẫn chỉ dành cho admin
     const adminOnlyPaths = [
         '/api/v1/users/get/count',
         '/api/v1/orders/get/totalsales',
         '/api/v1/products/random'
     ];
-
     if (!payload.isAdmin) {
-        // Kiểm tra xem request có phải là cho các endpoint chỉ dành cho admin hay không
         if (adminOnlyPaths.some(path => req.originalUrl.includes(path))) {
-            return done(null, true); // Từ chối token nếu là endpoint chỉ dành cho admin
+            return done(null, true);
         }
     }
-
-    // Cho phép tất cả các request khác
     done();
 }
 

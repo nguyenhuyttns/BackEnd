@@ -8,6 +8,16 @@ const momoService = require('../helpers/momo-service');
 const mongoose = require('mongoose');
 const { sendOrderConfirmationEmail } = require('../helpers/email-service');
 
+/**
+ * Tạo yêu cầu thanh toán MoMo cho đơn hàng
+ * 
+ * @route POST /api/v1/payments/create-momo/:orderId
+ * @param {string} orderId - ID của đơn hàng cần thanh toán
+ * @param {Object} req.body - Dữ liệu yêu cầu
+ * @param {string} req.body.returnUrl - URL chuyển hướng sau khi thanh toán
+ * @returns {Object} Thông tin thanh toán và URL thanh toán
+ * @description Tạo yêu cầu thanh toán qua MoMo và lưu thông tin giao dịch
+ */
 router.post('/create-momo/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -70,26 +80,30 @@ router.post('/create-momo/:orderId', async (req, res) => {
     }
 });
 
+/**
+ * Xử lý webhook từ MoMo
+ * 
+ * @route POST /api/v1/payments/webhook
+ * @param {Object} req.body - Dữ liệu IPN từ MoMo
+ * @returns {Object} Xác nhận đã xử lý webhook
+ * @description Xử lý thông báo thanh toán từ MoMo và cập nhật trạng thái đơn hàng
+ */
 router.post('/webhook', async (req, res) => {
     try {
         const ipnData = req.body;
-
-        // Ghi log dữ liệu IPN nhận được từ MoMo
         console.log('MoMo IPN Data:', JSON.stringify(ipnData));
 
-        // Kiểm tra dữ liệu cơ bản
+
         if (!ipnData) {
             console.error('No IPN data received');
             return res.status(400).json({ message: 'No IPN data received' });
         }
 
-        // Kiểm tra các trường cần thiết
         if (!ipnData.orderId || !ipnData.resultCode || !ipnData.transId || !ipnData.signature) {
             console.error('Missing required fields in IPN data');
             return res.status(400).json({ message: 'Missing required fields' });
         }
 
-        // Ghi log trước khi xác thực chữ ký
         console.log('Verifying signature for orderId:', ipnData.orderId);
         const isValidSignature = momoService.verifyIpnSignature(ipnData);
         console.log('Signature verification result:', isValidSignature);
@@ -99,7 +113,6 @@ router.post('/webhook', async (req, res) => {
             return res.status(400).json({ message: 'Invalid signature' });
         }
 
-        // Tìm giao dịch thanh toán
         console.log('Finding payment with paymentId:', ipnData.orderId);
         const payment = await Payment.findOne({ paymentId: ipnData.orderId });
 
@@ -108,7 +121,6 @@ router.post('/webhook', async (req, res) => {
             return res.status(404).json({ message: 'Payment not found' });
         }
 
-        // Cập nhật thông tin giao dịch
         console.log('Updating payment status from', payment.status, 'to', (ipnData.resultCode === 0 ? 'COMPLETED' : 'FAILED'));
         payment.status = ipnData.resultCode === 0 ? 'COMPLETED' : 'FAILED';
         payment.transId = ipnData.transId;
@@ -118,7 +130,6 @@ router.post('/webhook', async (req, res) => {
         await payment.save();
         console.log('Payment updated successfully');
 
-        // Nếu thanh toán thành công, cập nhật trạng thái đơn hàng
         if (ipnData.resultCode === 0) {
             console.log('Payment successful, updating order status');
             const order = await Order.findById(payment.order);
@@ -130,7 +141,6 @@ router.post('/webhook', async (req, res) => {
                 await order.save();
                 console.log('Order updated successfully');
 
-                // Gửi email xác nhận đơn hàng
                 const user = await User.findById(payment.user);
                 if (user && user.email) {
                     console.log('Sending confirmation email to', user.email);
@@ -139,8 +149,6 @@ router.post('/webhook', async (req, res) => {
                 }
             }
         }
-
-        // Trả về phản hồi cho MoMo
         console.log('Webhook processing completed successfully');
         return res.status(200).json({ message: 'Processed' });
     } catch (error) {
@@ -149,6 +157,17 @@ router.post('/webhook', async (req, res) => {
     }
 });
 
+/**
+ * Xử lý thanh toán thủ công
+ * 
+ * @route POST /api/v1/payments/process-payment
+ * @param {Object} req.body - Dữ liệu thanh toán
+ * @param {string} req.body.orderId - ID của giao dịch thanh toán
+ * @param {string} req.body.resultCode - Mã kết quả (mặc định "0" - thành công)
+ * @param {string} req.body.transId - ID giao dịch (mặc định là timestamp hiện tại)
+ * @returns {Object} Kết quả xử lý thanh toán
+ * @description Xử lý kết quả thanh toán thủ công khi không nhận được webhook
+ */
 router.post('/process-payment', async (req, res) => {
     try {
         const { orderId, resultCode = "0", transId = Date.now().toString() } = req.body;
@@ -163,7 +182,6 @@ router.post('/process-payment', async (req, res) => {
             });
         }
 
-        // Tìm giao dịch thanh toán
         console.log('Finding payment with paymentId:', orderId);
         const payment = await Payment.findOne({ paymentId: orderId });
 
@@ -226,7 +244,15 @@ router.post('/process-payment', async (req, res) => {
     }
 });
 
-// API kiểm tra trạng thái thanh toán
+
+/**
+ * Kiểm tra trạng thái thanh toán
+ * 
+ * @route GET /api/v1/payments/status/:paymentId
+ * @param {string} paymentId - ID của giao dịch thanh toán
+ * @returns {Object} Thông tin trạng thái thanh toán
+ * @description Trả về thông tin chi tiết về trạng thái của một giao dịch thanh toán
+ */
 router.get('/status/:paymentId', async (req, res) => {
     try {
         const { paymentId } = req.params;
@@ -262,7 +288,13 @@ router.get('/status/:paymentId', async (req, res) => {
     }
 });
 
-// API lấy tất cả giao dịch thanh toán (chỉ admin)
+/**
+ * Lấy danh sách tất cả giao dịch thanh toán
+ * 
+ * @route GET /api/v1/payments
+ * @returns {Object} Danh sách các giao dịch thanh toán
+ * @description Trả về danh sách tất cả các giao dịch thanh toán (chỉ dành cho admin)
+ */
 router.get('/', async (req, res) => {
     try {
         const payments = await Payment.find()

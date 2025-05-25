@@ -2,7 +2,19 @@
 const crypto = require('crypto');
 const axios = require('axios');
 
+/**
+ * Lớp dịch vụ tích hợp thanh toán MoMo
+ * 
+ * @class MomoService
+ * @description Cung cấp các phương thức để tạo và xác minh thanh toán qua MoMo
+ */
 class MomoService {
+    /**
+     * Khởi tạo đối tượng MomoService với các thông tin cấu hình
+     * 
+     * @constructor
+     * @description Thiết lập các thông số cấu hình từ biến môi trường hoặc giá trị mặc định
+     */
     constructor() {
         this.partnerCode = process.env.MOMO_PARTNER_CODE || 'MOMO';
         this.accessKey = process.env.MOMO_ACCESS_KEY || 'F8BBA842ECF85';
@@ -12,24 +24,31 @@ class MomoService {
         this.ipnUrl = process.env.MOMO_IPN_URL || 'http://localhost:3000/api/v1/payments/webhook';
     }
 
+    /**
+     * Tạo yêu cầu thanh toán MoMo
+     * 
+     * @async
+     * @function createPayment
+     * @param {Object} order - Đối tượng đơn hàng cần thanh toán
+     * @param {string} [returnUrl] - URL chuyển hướng sau khi thanh toán (tùy chọn)
+     * @returns {Promise<Object>} Kết quả yêu cầu thanh toán từ MoMo
+     * @throws {Error} Lỗi khi tạo yêu cầu thanh toán
+     * @description Tạo yêu cầu thanh toán đến MoMo và trả về kết quả với URL thanh toán
+     */
     async createPayment(order, returnUrl) {
         try {
-            // Sử dụng returnUrl từ tham số hoặc mặc định từ cấu hình
             let redirectUrl = returnUrl || this.redirectUrl;
-            
-            // Đảm bảo redirectUrl hợp lệ
+
             if (!redirectUrl) {
                 redirectUrl = 'http://localhost:3000/payment/callback';
             }
-            
             const orderInfo = `Thanh toán đơn hàng #${order._id.toString().slice(-8)}`;
             const amount = order.totalPrice.toString();
             const orderId = `${this.partnerCode}_${Date.now()}_${order._id.toString().slice(-8)}`;
             const requestId = orderId;
             const extraData = '';
             const requestType = "captureWallet";
-            
-            // Thêm orderId vào redirectUrl
+
             if (redirectUrl.indexOf('?') === -1) {
                 redirectUrl += '?orderId=' + orderId;
             } else {
@@ -39,7 +58,6 @@ class MomoService {
             console.log('Redirect URL with orderId:', redirectUrl);
 
             const rawSignature = `accessKey=${this.accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${this.ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${this.partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
-
             const signature = crypto.createHmac('sha256', this.secretKey)
                 .update(rawSignature)
                 .digest('hex');
@@ -88,9 +106,16 @@ class MomoService {
         }
     }
 
+    /**
+     * Xác minh chữ ký của thông báo IPN từ MoMo
+     * 
+     * @function verifyIpnSignature
+     * @param {Object} data - Dữ liệu IPN nhận được từ MoMo
+     * @returns {boolean} Kết quả xác minh (true nếu chữ ký hợp lệ)
+     * @description Kiểm tra tính xác thực của thông báo thanh toán từ MoMo thông qua chữ ký số
+     */
     verifyIpnSignature(data) {
         try {
-            // Kiểm tra các trường cần thiết
             if (!data || !data.accessKey || !data.amount || !data.extraData || !data.message || 
                 !data.orderId || !data.orderInfo || !data.orderType || !data.partnerCode || 
                 !data.payType || !data.requestId || !data.responseTime || !data.resultCode || 
@@ -99,12 +124,10 @@ class MomoService {
                 return false;
             }
 
-            // Log dữ liệu đầu vào để debug
             console.log('IPN Data received:', JSON.stringify(data, null, 2));
 
             const rawSignature = `accessKey=${data.accessKey}&amount=${data.amount}&extraData=${data.extraData}&message=${data.message}&orderId=${data.orderId}&orderInfo=${data.orderInfo}&orderType=${data.orderType}&partnerCode=${data.partnerCode}&payType=${data.payType}&requestId=${data.requestId}&responseTime=${data.responseTime}&resultCode=${data.resultCode}&transId=${data.transId}`;
 
-            // Log chuỗi dùng để tạo chữ ký
             console.log('Raw signature string:', rawSignature);
 
             const signature = crypto.createHmac('sha256', this.secretKey)

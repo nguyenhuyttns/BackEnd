@@ -3,7 +3,14 @@ const express = require('express');
 const router = express.Router();
 const { generateRecommendations } = require('../utils/kmeans');
 
-// API lấy đề xuất "For Me"
+/**
+ * Lấy đề xuất sản phẩm cá nhân hóa "For Me"
+ * 
+ * @route GET /api/v1/recommendations/for-me
+ * @query {number} limit - Số lượng sản phẩm đề xuất cần trả về (mặc định: 10)
+ * @returns {Object} Danh sách sản phẩm được đề xuất
+ * @description Tạo đề xuất sản phẩm cá nhân hóa dựa trên hành vi người dùng và thuật toán K-means
+ */
 router.get('/for-me', async (req, res) => {
   try {
     // Kiểm tra xem có token JWT không
@@ -16,13 +23,8 @@ router.get('/for-me', async (req, res) => {
       });
     }
 
-    // Lấy userId từ token JWT
     const userId = req.user.userId;
-    
-    // Số lượng sản phẩm đề xuất
     const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-    
-    // Tạo đề xuất
     const recommendations = await generateRecommendations(userId, limit);
     
     res.status(200).json({

@@ -22,7 +22,7 @@ const userActivitySchema = mongoose.Schema({
     default: 0
   },
   viewTime: {
-    type: Number, // Thời gian xem tính bằng giây
+    type: Number,
     default: 0
   },
   cartAddCount: {

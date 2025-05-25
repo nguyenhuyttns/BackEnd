@@ -1,6 +1,12 @@
 const nodemailer = require('nodemailer');
 
-// Tạo transporter với Gmail
+/**
+ * Tạo transporter để gửi email qua gmail
+ * @constant transporter
+ * @type {object}
+ * @description Đối tượng transporter được cấu hình để gửi email qua dịch vụ Gmail
+ * 
+ */
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -9,7 +15,14 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// Hàm gửi email đặt lại mật khẩu
+/**
+ * Gửi email đặt lại mật khẩu
+ * @param {*} email - Địa chỉ email người nhận
+ * @param {*} resetLink - Đường dẫn đặt lại mật khẩu
+ * @returns {Object} Kết quả gửi email { success: boolean, info: Object }
+ * @throws {Error} Lỗi khi gửi email
+ * @description Gửi email chứa liên kết đặt lại mật khẩu cho người dùng 
+ */
 const sendResetPasswordEmail = async (email, resetLink) => {
     try {
         const mailOptions = {
@@ -45,7 +58,17 @@ const sendResetPasswordEmail = async (email, resetLink) => {
     }
 };
 
-// Function to send order confirmation email
+/**
+ * Gửi email xác nhận đơn hàng
+ * 
+ * @function sendOrderConfirmationEmail
+ * @async
+ * @param {string} email - Địa chỉ email của người nhận
+ * @param {Object} order - Đối tượng chứa thông tin đơn hàng
+ * @returns {Object} Kết quả gửi email { success: boolean, info: Object }
+ * @throws {Error} Lỗi khi gửi email
+ * @description Gửi email xác nhận đơn hàng với thông tin chi tiết về sản phẩm, giá và thông tin vận chuyển
+ */
 const sendOrderConfirmationEmail = async (email, order) => {
     try {
         // Format order items for email display
