@@ -3,7 +3,15 @@ const { UserActivity } = require('../models/user-activity');
 const { Product } = require('../models/product');
 const { Category } = require('../models/category');
 
-// Hàm tính khoảng cách Euclidean giữa hai vector
+/**
+ * Tính khoảng cách Euclidean giữa hai vector
+ * 
+ * @function euclideanDistance
+ * @param {Array<number>} vector1 - Vector thứ nhất
+ * @param {Array<number>} vector2 - Vector thứ hai
+ * @returns {number} Khoảng cách Euclidean
+ * @description Tính khoảng cách Euclidean giữa hai vector n chiều
+ */
 function euclideanDistance(vector1, vector2) {
   if (vector1.length !== vector2.length) {
     throw new Error('Vectors must have the same dimensions');
@@ -17,7 +25,15 @@ function euclideanDistance(vector1, vector2) {
   return Math.sqrt(sum);
 }
 
-// Hàm khởi tạo các tâm cụm ngẫu nhiên
+/**
+ * Khởi tạo các tâm cụm ngẫu nhiên
+ * 
+ * @function initializeCentroids
+ * @param {Array<Array<number>>} data - Tập dữ liệu đầu vào
+ * @param {number} k - Số lượng cụm
+ * @returns {Array<Array<number>>} Các tâm cụm ban đầu
+ * @description Chọn k điểm ngẫu nhiên từ dữ liệu làm tâm cụm ban đầu
+ */
 function initializeCentroids(data, k) {
   // Chọn k điểm ngẫu nhiên từ dữ liệu làm tâm cụm ban đầu
   const centroids = [];
@@ -41,7 +57,15 @@ function initializeCentroids(data, k) {
   return centroids;
 }
 
-// Hàm gán các điểm vào cụm gần nhất
+/**
+ * Gán các điểm vào cụm gần nhất
+ * 
+ * @function assignToClusters
+ * @param {Array<Array<number>>} data - Tập dữ liệu đầu vào
+ * @param {Array<Array<number>>} centroids - Các tâm cụm
+ * @returns {Array<Array<number>>} Các cụm với chỉ số của các điểm
+ * @description Gán mỗi điểm dữ liệu vào cụm có tâm gần nhất
+ */
 function assignToClusters(data, centroids) {
   const clusters = Array(centroids.length).fill().map(() => []);
   
@@ -65,7 +89,15 @@ function assignToClusters(data, centroids) {
   return clusters;
 }
 
-// Hàm cập nhật tâm cụm
+/**
+ * Cập nhật tâm cụm
+ * 
+ * @function updateCentroids
+ * @param {Array<Array<number>>} data - Tập dữ liệu đầu vào
+ * @param {Array<Array<number>>} clusters - Các cụm với chỉ số của các điểm
+ * @returns {Array<Array<number>>} Các tâm cụm mới
+ * @description Cập nhật tâm cụm bằng cách tính trung bình các điểm trong cụm
+ */
 function updateCentroids(data, clusters) {
   return clusters.map(cluster => {
     // Nếu cụm rỗng, giữ nguyên tâm cụm
@@ -91,7 +123,17 @@ function updateCentroids(data, clusters) {
   });
 }
 
-// Hàm kiểm tra hội tụ
+
+/**
+ * Kiểm tra điều kiện hội tụ
+ * 
+ * @function hasConverged
+ * @param {Array<Array<number>>} oldCentroids - Các tâm cụm cũ
+ * @param {Array<Array<number>>} newCentroids - Các tâm cụm mới
+ * @param {number} threshold - Ngưỡng hội tụ
+ * @returns {boolean} Đã hội tụ hay chưa
+ * @description Kiểm tra xem thuật toán đã hội tụ chưa bằng cách so sánh tâm cụm cũ và mới
+ */
 function hasConverged(oldCentroids, newCentroids, threshold = 0.001) {
   if (!oldCentroids || !newCentroids) return false;
   
@@ -101,7 +143,17 @@ function hasConverged(oldCentroids, newCentroids, threshold = 0.001) {
   });
 }
 
-// Hàm chính thực hiện thuật toán K-means
+/**
+ * Thực hiện thuật toán K-means
+ * 
+ * @function kMeans
+ * @async
+ * @param {Array<Array<number>>} data - Tập dữ liệu đầu vào
+ * @param {number} k - Số lượng cụm
+ * @param {number} maxIterations - Số lần lặp tối đa
+ * @returns {Object} Kết quả phân cụm và các tâm cụm
+ * @description Thực hiện thuật toán K-means để phân cụm dữ liệu
+ */
 async function kMeans(data, k, maxIterations = 100) {
   if (data.length === 0) return { clusters: [], centroids: [] };
   
@@ -128,7 +180,14 @@ async function kMeans(data, k, maxIterations = 100) {
   return { clusters, centroids };
 }
 
-// Hàm chuẩn bị dữ liệu người dùng cho K-means
+/**
+ * Chuẩn bị dữ liệu người dùng cho thuật toán K-means
+ * 
+ * @function prepareUserFeatures
+ * @async
+ * @returns {Object} Đặc trưng người dùng và danh sách ID người dùng
+ * @description Chuẩn bị dữ liệu đặc trưng người dùng dựa trên hoạt động và sở thích
+ */
 async function prepareUserFeatures() {
   try {
     // Lấy tất cả danh mục
@@ -214,7 +273,14 @@ async function prepareUserFeatures() {
   }
 }
 
-// Hàm chuẩn hóa vector
+/**
+ * Chuẩn hóa vector
+ * 
+ * @function normalizeVector
+ * @param {Array<number>} vector - Vector cần chuẩn hóa
+ * @returns {Array<number>} Vector đã chuẩn hóa
+ * @description Chuẩn hóa vector bằng cách chia mỗi phần tử cho tổng
+ */
 function normalizeVector(vector) {
   const sum = vector.reduce((a, b) => a + b, 0);
   if (sum === 0) return vector; // Tránh chia cho 0
@@ -222,7 +288,16 @@ function normalizeVector(vector) {
   return vector.map(value => value / sum);
 }
 
-// Hàm tạo đề xuất cho người dùng
+/**
+ * Tạo đề xuất sản phẩm cho người dùng
+ * 
+ * @function generateRecommendations
+ * @async
+ * @param {string} userId - ID của người dùng
+ * @param {number} numberOfRecommendations - Số lượng sản phẩm đề xuất
+ * @returns {Array<Object>} Danh sách sản phẩm đề xuất
+ * @description Tạo đề xuất sản phẩm dựa trên phân cụm người dùng
+ */
 async function generateRecommendations(userId, numberOfRecommendations = 10) {
   try {
     console.log(`Generating recommendations for user ${userId}`);
@@ -304,7 +379,16 @@ async function generateRecommendations(userId, numberOfRecommendations = 10) {
   }
 }
 
-// Hàm lấy sản phẩm phổ biến trong cụm
+/**
+ * Lấy sản phẩm phổ biến trong cụm người dùng
+ * 
+ * @function getClusterPopularProducts
+ * @async
+ * @param {Array<string>} userIds - Danh sách ID người dùng trong cụm
+ * @param {number} limit - Số lượng sản phẩm cần lấy
+ * @returns {Array<Object>} Danh sách sản phẩm phổ biến trong cụm
+ * @description Tìm sản phẩm phổ biến nhất trong cụm người dùng tương tự
+ */
 async function getClusterPopularProducts(userIds, limit) {
   try {
     // Lấy hoạt động của các người dùng trong cụm
@@ -348,7 +432,15 @@ async function getClusterPopularProducts(userIds, limit) {
   }
 }
 
-// Hàm lấy sản phẩm phổ biến (fallback)
+/**
+ * Lấy sản phẩm phổ biến nhất
+ * 
+ * @function getPopularProducts
+ * @async
+ * @param {number} limit - Số lượng sản phẩm cần lấy
+ * @returns {Array<Object>} Danh sách sản phẩm phổ biến
+ * @description Lấy sản phẩm phổ biến nhất dựa trên số lượt đánh giá và xếp hạng
+ */
 async function getPopularProducts(limit) {
   try {
     // Lấy sản phẩm có nhiều lượt mua nhất

@@ -41,7 +41,7 @@ const userSchema = mongoose.Schema({
     type: String,
     default: '',
   },
-  // Thêm các trường mới cho tính năng quên mật khẩu
+  
   resetPasswordToken: {
     type: String,
     default: null

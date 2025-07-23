@@ -4,6 +4,14 @@ const express = require('express');
 const router = express.Router();
 const { sendOrderConfirmationEmail } = require('../helpers/email-service');
 
+
+/**
+ * Lấy danh sách tất cả đơn hàng
+ * 
+ * @route GET /api/v1/orders
+ * @returns {Array} Danh sách tất cả đơn hàng
+ * @description Trả về danh sách tất cả đơn hàng, sắp xếp theo ngày đặt hàng mới nhất
+ */
 router.get(`/`, async (req, res) => {
     //http://localhost:3000/api/v1/orders (find all order)
     const orderList = await Order.find()
@@ -16,6 +24,14 @@ router.get(`/`, async (req, res) => {
     res.send(orderList);
 });
 
+/**
+ * Lấy thông tin chi tiết một đơn hàng
+ * 
+ * @route GET /api/v1/orders/:id
+ * @param {string} id - ID của đơn hàng
+ * @returns {Object} Thông tin chi tiết đơn hàng
+ * @description Trả về thông tin đơn hàng với các chi tiết sản phẩm và danh mục
+ */
 router.get(`/:id`, async (req, res) => {
     //
     const order = await Order.findById(req.params.id)
@@ -34,6 +50,13 @@ router.get(`/:id`, async (req, res) => {
     res.send(order);
 });
 
+/**
+ * Lấy tổng doanh số bán hàng
+ * 
+ * @route GET /api/v1/orders/get/totalsales
+ * @returns {Object} Tổng doanh số
+ * @description Tính tổng doanh số từ tất cả các đơn hàng
+ */
 router.get('/get/totalsales', async (req, res) => {
     //http://localhost:3000/api/v1/orders/get/totalsales (sum the total sales)
     const totalSales = await Order.aggregate([
@@ -47,6 +70,13 @@ router.get('/get/totalsales', async (req, res) => {
     res.send({ totalsales: totalSales.pop().totalsales });
 });
 
+/**
+ * Lấy số lượng đơn hàng
+ * 
+ * @route GET /api/v1/orders/get/count
+ * @returns {Object} Số lượng đơn hàng
+ * @description Đếm tổng số đơn hàng trong hệ thống
+ */
 router.get(`/get/count`, async (req, res) => {
     //http://localhost:3000/api/v1/orders/get/count (count the number of order)
     const orderCount = await Order.countDocuments();
@@ -59,6 +89,14 @@ router.get(`/get/count`, async (req, res) => {
     });
 });
 
+/**
+ * Lấy danh sách đơn hàng của một người dùng
+ * 
+ * @route GET /api/v1/orders/get/userorders/:userid
+ * @param {string} userid - ID của người dùng
+ * @returns {Array} Danh sách đơn hàng của người dùng
+ * @description Trả về tất cả đơn hàng của một người dùng cụ thể
+ */
 router.get(`/get/userorders/:userid`, async (req, res) => {
     //http://localhost:3000/api/v1/orders/get/userorders/67dd0e237934ed172345c5e4 (get oder of user)
 
@@ -78,6 +116,24 @@ router.get(`/get/userorders/:userid`, async (req, res) => {
     res.send(userOrderList);
 });
 
+/**
+ * Tạo đơn hàng mới
+ * 
+ * @route POST /api/v1/orders
+ * @param {Object} req.body - Dữ liệu đơn hàng
+ * @param {Array} req.body.orderItems - Danh sách các mặt hàng trong đơn hàng
+ * @param {string} req.body.shippingAddress1 - Địa chỉ giao hàng 1
+ * @param {string} req.body.shippingAddress2 - Địa chỉ giao hàng 2 (tùy chọn)
+ * @param {string} req.body.city - Thành phố
+ * @param {string} req.body.zip - Mã bưu điện
+ * @param {string} req.body.country - Quốc gia
+ * @param {string} req.body.phone - Số điện thoại
+ * @param {string} req.body.status - Trạng thái đơn hàng
+ * @param {string} req.body.user - ID của người dùng
+ * @param {string} req.body.paymentMethod - Phương thức thanh toán
+ * @returns {Object} Đơn hàng đã tạo
+ * @description Tạo đơn hàng mới và gửi email xác nhận
+ */
 router.post('/', async (req, res) => {
     const orderItemsIds = Promise.all(
         req.body.orderItems.map(async (orderItem) => {
@@ -127,7 +183,6 @@ router.post('/', async (req, res) => {
 
     // After successfully creating the order, send confirmation email
     try {
-        // First, populate the order with product details for the email
         const populatedOrder = await Order.findById(order._id)
             .populate('user', 'name email')
             .populate({
@@ -150,32 +205,46 @@ router.post('/', async (req, res) => {
         }
     } catch (error) {
         console.error('Error sending order confirmation email:', error);
-        // Continue with response even if email fails
     }
 
     res.send(order);
 });
 
-// Hàm để tạo số ngẫu nhiên trong khoảng
+/**
+ * Tạo số ngẫu nhiên trong khoảng
+ * 
+ * @function getRandomNumber
+ * @param {number} min - Giá trị tối thiểu
+ * @param {number} max - Giá trị tối đa
+ * @returns {number} Số ngẫu nhiên trong khoảng từ min đến max
+ * @description Tạo một số nguyên ngẫu nhiên trong khoảng từ min đến max
+ */
 function getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Endpoint mới để tạo đơn hàng ngẫu nhiên
+
+/**
+ * Tạo đơn hàng ngẫu nhiên cho người dùng
+ * 
+ * @route POST /api/v1/orders/random/:userid/:count?
+ * @param {string} userid - ID của người dùng
+ * @param {number} count - Số lượng đơn hàng cần tạo (tùy chọn, mặc định là 1)
+ * @returns {Object} Thông tin về các đơn hàng đã tạo
+ * @description Tạo một hoặc nhiều đơn hàng ngẫu nhiên cho mục đích kiểm thử
+ */
 router.post('/random/:userid/:count?', async (req, res) => {
     try {
         const userId = req.params.userid;
-        // Số lượng đơn hàng cần tạo, mặc định là 1
         const orderCount = parseInt(req.params.count) || 1;
 
-        // Kiểm tra user ID
         const { User } = require('../models/user');
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).send('User not found');
         }
 
-        // Lấy danh sách sản phẩm từ database
+      
         const { Product } = require('../models/product');
         const products = await Product.find();
 
@@ -183,24 +252,16 @@ router.post('/random/:userid/:count?', async (req, res) => {
             return res.status(404).send('No products found in database');
         }
 
-        // Mảng để lưu các đơn hàng đã tạo
         const createdOrders = [];
 
-        // Tạo nhiều đơn hàng theo số lượng yêu cầu
         for (let i = 0; i < orderCount; i++) {
-            // Số lượng sản phẩm trong đơn hàng (từ 1 đến 5)
             const productCount = getRandomNumber(1, 5);
-
-            // Tạo danh sách sản phẩm ngẫu nhiên cho đơn hàng
             const orderItemsIds = await Promise.all(
                 Array.from({ length: productCount }, async () => {
-                    // Chọn sản phẩm ngẫu nhiên
                     const randomProduct =
                         products[getRandomNumber(0, products.length - 1)];
-                    // Tạo số lượng ngẫu nhiên (từ 1 đến 10)
                     const randomQuantity = getRandomNumber(1, 10);
 
-                    // Tạo và lưu OrderItem
                     let newOrderItem = new OrderItem({
                         quantity: randomQuantity,
                         product: randomProduct._id,
@@ -211,7 +272,6 @@ router.post('/random/:userid/:count?', async (req, res) => {
                 })
             );
 
-            // Tính tổng giá trị đơn hàng
             const totalPrices = await Promise.all(
                 orderItemsIds.map(async (orderItemId) => {
                     const orderItem = await OrderItem.findById(
@@ -225,7 +285,6 @@ router.post('/random/:userid/:count?', async (req, res) => {
 
             const totalPrice = totalPrices.reduce((a, b) => a + b, 0);
 
-            // Tạo thông tin địa chỉ ngẫu nhiên
             const cities = [
                 'Ho Chi Minh City',
                 'Hanoi',
@@ -241,7 +300,6 @@ router.post('/random/:userid/:count?', async (req, res) => {
                 'Thailand',
             ];
 
-            // Tạo và lưu đơn hàng
             let order = new Order({
                 orderItems: orderItemsIds,
                 shippingAddress1: `${getRandomNumber(1, 100)} Flowers Street, ${getRandomNumber(1, 999)}`,
@@ -261,11 +319,9 @@ router.post('/random/:userid/:count?', async (req, res) => {
                 throw new Error(`Failed to create order ${i + 1}`);
             }
 
-            // Thêm đơn hàng đã tạo vào mảng kết quả
             createdOrders.push(order);
         }
 
-        // Trả về kết quả
         res.status(201).json({
             success: true,
             message: `Successfully created ${createdOrders.length} random orders for user ${userId}`,
@@ -281,6 +337,16 @@ router.post('/random/:userid/:count?', async (req, res) => {
     }
 });
 
+/**
+ * Cập nhật trạng thái đơn hàng
+ * 
+ * @route PUT /api/v1/orders/:id
+ * @param {string} id - ID của đơn hàng
+ * @param {Object} req.body - Dữ liệu cập nhật
+ * @param {string} req.body.status - Trạng thái mới của đơn hàng
+ * @returns {Object} Đơn hàng đã cập nhật
+ * @description Cập nhật trạng thái của một đơn hàng
+ */
 router.put('/:id', async (req, res) => {
     const order = await Order.findByIdAndUpdate(
         req.params.id,
@@ -295,6 +361,15 @@ router.put('/:id', async (req, res) => {
     res.send(order);
 });
 
+
+/**
+ * Xóa đơn hàng
+ * 
+ * @route DELETE /api/v1/orders/:id
+ * @param {string} id - ID của đơn hàng
+ * @returns {Object} Thông báo kết quả xóa
+ * @description Xóa đơn hàng và tất cả các mục đơn hàng liên quan
+ */
 router.delete('/:id', (req, res) => {
     //http://localhost:3000/api/v1/orders/67dda0f0e4beacbbad213cd9
     Order.findByIdAndDelete(req.params.id)

@@ -3,10 +3,16 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto'); 
+const { sendResetPasswordEmail } = require('../helpers/email-service');
 
-const crypto = require('crypto'); // Thêm dòng này
-const { sendResetPasswordEmail } = require('../helpers/email-service'); // Thêm dòng này
-
+/**
+ * Lấy danh sách tất cả người dùng
+ * 
+ * @route GET /api/v1/users
+ * @returns {Array} Danh sách người dùng (không bao gồm mật khẩu)
+ * @description Trả về danh sách tất cả người dùng trong hệ thống
+ */
 router.get(`/`, async (req, res) => {
     const userList = await User.find().select('-passwordHash');
 
@@ -16,6 +22,14 @@ router.get(`/`, async (req, res) => {
     res.send(userList);
 });
 
+/**
+ * Lấy thông tin một người dùng theo ID
+ * 
+ * @route GET /api/v1/users/:id
+ * @param {string} id - ID của người dùng
+ * @returns {Object} Thông tin người dùng (không bao gồm mật khẩu)
+ * @description Trả về thông tin chi tiết của một người dùng dựa theo ID
+ */
 router.get('/:id', async (req, res) => {
     const user = await User.findById(req.params.id).select('-passwordHash');
 
@@ -27,6 +41,24 @@ router.get('/:id', async (req, res) => {
     res.status(200).send(user);
 });
 
+/**
+ * Tạo người dùng mới
+ * 
+ * @route POST /api/v1/users
+ * @param {Object} req.body - Dữ liệu người dùng
+ * @param {string} req.body.name - Tên người dùng
+ * @param {string} req.body.email - Email người dùng
+ * @param {string} req.body.password - Mật khẩu người dùng
+ * @param {string} req.body.phone - Số điện thoại người dùng
+ * @param {boolean} req.body.isAdmin - Quyền admin
+ * @param {string} req.body.street - Đường
+ * @param {string} req.body.apartment - Căn hộ
+ * @param {string} req.body.zip - Mã bưu điện
+ * @param {string} req.body.city - Thành phố
+ * @param {string} req.body.country - Quốc gia
+ * @returns {Object} Người dùng đã tạo
+ * @description Tạo một người dùng mới với thông tin được cung cấp
+ */
 router.post('/', async (req, res) => {
     let user = new User({
         name: req.body.name,
@@ -47,6 +79,25 @@ router.post('/', async (req, res) => {
     res.send(user);
 });
 
+/**
+ * Cập nhật thông tin người dùng
+ * 
+ * @route PUT /api/v1/users/:id
+ * @param {string} id - ID của người dùng
+ * @param {Object} req.body - Dữ liệu cập nhật
+ * @param {string} req.body.name - Tên người dùng
+ * @param {string} req.body.email - Email người dùng
+ * @param {string} req.body.password - Mật khẩu người dùng (tùy chọn)
+ * @param {string} req.body.phone - Số điện thoại người dùng
+ * @param {boolean} req.body.isAdmin - Quyền admin
+ * @param {string} req.body.street - Đường
+ * @param {string} req.body.apartment - Căn hộ
+ * @param {string} req.body.zip - Mã bưu điện
+ * @param {string} req.body.city - Thành phố
+ * @param {string} req.body.country - Quốc gia
+ * @returns {Object} Người dùng đã cập nhật
+ * @description Cập nhật thông tin của một người dùng dựa theo ID
+ */
 router.put('/:id', async (req, res) => {
     const userExist = await User.findById(req.params.id);
     let newPassword;
@@ -78,6 +129,16 @@ router.put('/:id', async (req, res) => {
     res.send(user);
 });
 
+/**
+ * Đăng nhập người dùng
+ * 
+ * @route POST /api/v1/users/login
+ * @param {Object} req.body - Thông tin đăng nhập
+ * @param {string} req.body.email - Email người dùng
+ * @param {string} req.body.password - Mật khẩu người dùng
+ * @returns {Object} Token JWT và email người dùng
+ * @description Xác thực người dùng và trả về token JWT
+ */
 router.post('/login', async (req, res) => {
     const user = await User.findOne({ email: req.body.email });
     const secret = process.env.secret;
@@ -101,6 +162,24 @@ router.post('/login', async (req, res) => {
     }
 });
 
+/**
+ * Đăng ký người dùng mới
+ * 
+ * @route POST /api/v1/users/register
+ * @param {Object} req.body - Dữ liệu người dùng
+ * @param {string} req.body.name - Tên người dùng
+ * @param {string} req.body.email - Email người dùng
+ * @param {string} req.body.password - Mật khẩu người dùng
+ * @param {string} req.body.phone - Số điện thoại người dùng
+ * @param {boolean} req.body.isAdmin - Quyền admin
+ * @param {string} req.body.street - Đường
+ * @param {string} req.body.apartment - Căn hộ
+ * @param {string} req.body.zip - Mã bưu điện
+ * @param {string} req.body.city - Thành phố
+ * @param {string} req.body.country - Quốc gia
+ * @returns {Object} Người dùng đã đăng ký
+ * @description Đăng ký một người dùng mới với thông tin được cung cấp
+ */
 router.post('/register', async (req, res) => {
     let user = new User({
         name: req.body.name,
@@ -121,6 +200,14 @@ router.post('/register', async (req, res) => {
     res.send(user);
 });
 
+/**
+ * Xóa người dùng
+ * 
+ * @route DELETE /api/v1/users/:id
+ * @param {string} id - ID của người dùng
+ * @returns {Object} Thông báo kết quả xóa
+ * @description Xóa một người dùng dựa theo ID
+ */
 router.delete('/:id', (req, res) => {
     User.findByIdAndDelete(req.params.id)
         .then((user) => {
@@ -139,6 +226,13 @@ router.delete('/:id', (req, res) => {
         });
 });
 
+/**
+ * Đếm số lượng người dùng
+ * 
+ * @route GET /api/v1/users/get/count
+ * @returns {Object} Số lượng người dùng
+ * @description Đếm tổng số người dùng trong hệ thống
+ */
 router.get(`/get/count`, async (req, res) => {
     const userCount = await User.countDocuments((count) => count);
 
@@ -150,7 +244,16 @@ router.get(`/get/count`, async (req, res) => {
     });
 });
 
-// Route quên mật khẩu
+
+/**
+ * Yêu cầu đặt lại mật khẩu
+ * 
+ * @route POST /api/v1/users/forgot-password
+ * @param {Object} req.body - Thông tin yêu cầu
+ * @param {string} req.body.email - Email người dùng
+ * @returns {Object} Thông báo kết quả
+ * @description Tạo token đặt lại mật khẩu và gửi email hướng dẫn
+ */
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -191,7 +294,17 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 
-// Route đặt lại mật khẩu (giữ nguyên)
+
+/**
+ * Đặt lại mật khẩu
+ * 
+ * @route POST /api/v1/users/reset-password
+ * @param {Object} req.body - Thông tin đặt lại mật khẩu
+ * @param {string} req.body.token - Token đặt lại mật khẩu
+ * @param {string} req.body.newPassword - Mật khẩu mới
+ * @returns {Object} Thông báo kết quả
+ * @description Đặt lại mật khẩu cho người dùng bằng token hợp lệ
+ */
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;

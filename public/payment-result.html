@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kết quả thanh toán</title>
+     <!-- 
+     * CSS Styles
+     * @description Định dạng giao diện trang kết quả thanh toán
+     */
+    -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -73,6 +78,11 @@
     </style>
 </head>
 <body>
+    <!-- 
+     * Container chính
+     * @description Khung chứa nội dung trang kết quả thanh toán
+     */
+    -->
     <div class="container">
         <div class="header">
             <h1>E-shop</h1>
@@ -96,8 +106,13 @@
     </div>
 
     <script>
+        /**
+         * Khởi tạo trang khi DOM đã tải xong
+         * 
+         * @function DOMContentLoaded
+         * @description Xử lý các tham số từ URL và bắt đầu quá trình xác thực thanh toán
+         */
         document.addEventListener('DOMContentLoaded', function() {
-            // Lấy các tham số từ URL
             const urlParams = new URLSearchParams(window.location.search);
             const orderId = urlParams.get('orderId');
             const resultCode = urlParams.get('resultCode');
@@ -107,25 +122,29 @@
                 resultCode: resultCode
             });
             
-            // Nếu không có orderId, hiển thị lỗi
             if (!orderId) {
                 showError("Không tìm thấy thông tin đơn hàng.");
                 document.getElementById('loading').style.display = 'none';
                 return;
             }
             
-            // Hiển thị orderId
             document.getElementById('orderId').textContent = orderId;
             document.getElementById('time').textContent = new Date().toLocaleString();
             
-            // Gọi API để cập nhật trạng thái thanh toán
             processPayment(orderId, resultCode);
         });
         
+        /**
+         * Xử lý thanh toán bằng cách gọi API
+         * 
+         * @function processPayment
+         * @param {string} orderId - Mã đơn hàng cần xử lý
+         * @param {string} resultCode - Mã kết quả từ MoMo
+         * @description Gửi yêu cầu đến API để xác nhận và cập nhật trạng thái thanh toán
+         */
         function processPayment(orderId, resultCode) {
             console.log('Processing payment for orderId:', orderId);
             
-            // Gọi API process-payment
             fetch('/api/v1/payments/process-payment', {
                 method: 'POST',
                 headers: {
@@ -133,7 +152,7 @@
                 },
                 body: JSON.stringify({
                     orderId: orderId,
-                    resultCode: resultCode || "0" // Mặc định là thành công nếu không có resultCode
+                    resultCode: resultCode || "0" 
                 })
             })
             .then(response => {
@@ -162,12 +181,26 @@
             });
         }
         
+        /**
+         * Hiển thị thông báo thành công
+         * 
+         * @function showSuccess
+         * @param {string} message - Nội dung thông báo thành công
+         * @description Hiển thị thông báo thành công với định dạng màu xanh lá
+         */
         function showSuccess(message) {
             const resultElement = document.getElementById('result');
             resultElement.innerHTML = `<div class="success-message">${message}</div>`;
             resultElement.style.display = 'block';
         }
         
+        /**
+         * Hiển thị thông báo lỗi
+         * 
+         * @function showError
+         * @param {string} message - Nội dung thông báo lỗi
+         * @description Hiển thị thông báo lỗi với định dạng màu đỏ
+         */
         function showError(message) {
             const resultElement = document.getElementById('result');
             resultElement.innerHTML = `<div class="error-message">${message}</div>`;
