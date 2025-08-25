@@ -1,74 +1,70 @@
-require('dotenv/config');
-
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const authJwt = require('./helpers/jwt');
-const errorHandler = require('./helpers/error-handler');
-const path = require('path'); 
-const userActivityRoutes = require('./routes/user-activity');
-const recommendationsRoutes = require('./routes/recommendations');
-const paymentsRoutes = require('./routes/payments');
+require('dotenv/config');
 
+const api = process.env.API_URL || '/api/v1';
 
-const api = process.env.API_URL;
-
-app.get('/favicon.ico', (req, res) => res.status(204).end());
-
-
+// Middleware
 app.use(cors());
-app.options('*',cors());
-
-//middleware
+app.options('*', cors());
 app.use(bodyParser.json());
 app.use(morgan('tiny'));
-app.use(authJwt());
-app.use('/public/uploads', express.static(__dirname + '/public/uploads'));
-app.use(`${api}/user-activity`, userActivityRoutes);
-app.use(`${api}/recommendations`, recommendationsRoutes);
-app.use(`${api}/payments`, paymentsRoutes);
-// app.use(errorHandler);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Phục vụ các file tĩnh từ thư mục public
-app.use(express.static(path.join(__dirname, 'public'))); // Thêm dòng này
-
-// Xử lý trang đặt lại mật khẩu
-app.get('/reset-password', (req, res) => {          // Thêm route này
-  const token = req.query.token;
-  res.sendFile(path.join(__dirname, 'public', 'reset-password.html'));
-});
-// Thêm vào app.js
-app.get('/payment/callback', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'payment-result.html'));
-});
-
-//Routers
+// Import Routes
+const categoriesRouter = require('./routes/categories');
 const productsRouter = require('./routes/products');
-const categoriesRoutes = require('./routes/categories');
-const usersRoutes = require('./routes/users');
-const ordersRoutes = require('./routes/orders');
+const suppliersRouter = require('./routes/suppliers');
 
-
+// Routes
+app.use(`${api}/categories`, categoriesRouter);
 app.use(`${api}/products`, productsRouter);
-app.use(`${api}/categories`, categoriesRoutes);
-app.use(`${api}/users`, usersRoutes);
-app.use(`${api}/orders`, ordersRoutes);
+app.use(`${api}/suppliers`, suppliersRouter);
 
+// Welcome route
+app.get('/', (req, res) => {
+    res.send('API Quản lý sản phẩm đang chạy!');
+});
 
-//database
+// Error handling middleware
+app.use((err, req, res, next) => {
+    if (err) {
+        res.status(err.status || 500).json({
+            error: {
+                message: err.message
+            }
+        });
+    }
+});
+
+// 404 handler
+app.use((req, res, next) => {
+    res.status(404).json({
+        message: 'Route not found'
+    });
+});
+
+// Database connection - ĐÃ SỬA
 mongoose
-    .connect(process.env.CONNECTION_STRING, {})
+    .connect(process.env.CONNECTION_STRING)  // Bỏ options
     .then(() => {
-        console.log('Database Connection is ready...');
+        console.log('✅ Database Connection is ready...');
     })
     .catch((err) => {
-        console.log(err);
+        console.log('❌ Database connection error:', err);
     });
 
-app.listen(3000, () => {
-    console.log(api);
-    console.log('server is running http://localhost:3000');
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`📡 API URL: ${api}`);
+    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    console.log(`📚 API Documentation: http://localhost:${PORT}${api}`);
 });
+
+module.exports = app;

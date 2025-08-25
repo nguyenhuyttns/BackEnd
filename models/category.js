@@ -1,24 +1,35 @@
 const mongoose = require('mongoose');
 
-const categorySchema = mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-    },
-    icon: {
-        type: String,
-    },
-    color: { 
-        type: String,
-    }
-})
-
-categorySchema.virtual('id').get(function () {
-    return this._id.toHexString();
+const categorySchema = new mongoose.Schema({
+  maDanhMuc: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
+  },
+  tenDanhMuc: {
+    type: String,
+    required: true
+  },
+  capDanhMuc: {
+    type: String,
+    enum: ['loai', 'dong', 'nhanh'],
+    required: true
+  },
+  maDanhMucCha: {
+    type: String,
+    default: null
+  },
+  trangThai: {
+    type: String,
+    enum: ['hoatDong', 'ngung'],
+    default: 'hoatDong'
+  }
+}, {
+  timestamps: true
 });
 
-categorySchema.set('toJSON', {
-    virtuals: true,
-});
+// Index để query nhanh theo cấp
+categorySchema.index({ capDanhMuc: 1, maDanhMucCha: 1 });
 
-exports.Category = mongoose.model('Category', categorySchema);
+module.exports = mongoose.model('Category', categorySchema);
